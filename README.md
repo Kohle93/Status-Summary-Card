@@ -1,14 +1,11 @@
-<img width="300" height="83" alt="showcase-transparent" src="https://github.com/user-attachments/assets/d3bfafcf-93ed-47d7-b16f-221350757225" />
-<img width="300" height="67" alt="showcase-solid" src="https://github.com/user-attachments/assets/ed4a6bf5-c679-4f13-b184-5d797f84cf1c" />
-<img width="300" height="138" alt="gallery-modes" src="https://github.com/user-attachments/assets/aa28a672-b640-48a5-81b1-bf05d0d4c50c" />
-<img width="300" height="78" alt="color-palette" src="https://github.com/user-attachments/assets/baace127-b228-4e92-b374-d00d12a48bd2" />
+
 # 🏠 Status-Übersicht-Karte
 
 Eine schlanke Lovelace-Karte für Home Assistant, die auf einen Blick zeigt, wie viele
 **Rollläden**, **Fenster & Türen**, **Lampen** oder **Batterien** gerade aktiv (offen / an / schwach)
 sind – komplett über das UI konfigurierbar, ganz ohne YAML.
 
-![Status-Übersicht-Karte – Solid-Stil](images/showcase-solid.svg)
+<img width="300" height="67" alt="showcase-solid" src="https://github.com/user-attachments/assets/ed4a6bf5-c679-4f13-b184-5d797f84cf1c" />
 
 ## ✨ Features
 
@@ -22,21 +19,21 @@ sind – komplett über das UI konfigurierbar, ganz ohne YAML.
 - **Größenanpassung per Drag & Drop** in der Bereiche-Ansicht
 - **Frei konfigurierbare Tap-Action** (Navigieren, Mehr-Info, URL, Service-Aufruf)
 
-![Status-Übersicht-Karte – Transparent-Stil](images/showcase-transparent.svg)
+<img width="300" height="83" alt="showcase-transparent" src="https://github.com/user-attachments/assets/d3bfafcf-93ed-47d7-b16f-221350757225" />
 
 ## 🎨 Alle Modi – aktiv und inaktiv, jeweils mit eigener Farbe
 
 Für jeden Modus lassen sich Icon und Farbe für den aktiven und den inaktiven Zustand
 unabhängig voneinander festlegen. Ein paar Beispiele, wie bunt das werden kann:
 
-![Galerie aller Modi mit farbigen Icons](images/gallery-modes.svg)
+<img width="300" height="138" alt="gallery-modes" src="https://github.com/user-attachments/assets/aa28a672-b640-48a5-81b1-bf05d0d4c50c" />
 
 ## 🌈 Farbpicker
 
 `icon_color_active` und `icon_color_inactive` werden über einen nativen Farbpicker gesetzt –
 entweder aus einer Palette benannter Farben oder per eigenem Hex-Code:
 
-![Verfügbare Icon-Farben](images/color-palette.svg)
+<img width="300" height="78" alt="color-palette" src="https://github.com/user-attachments/assets/baace127-b228-4e92-b374-d00d12a48bd2" />
 
 > Alle Bilder oben sind Beispiel-Mockups im Design der Karte. Screenshots aus einer echten
 > Dashboard-Installation folgen, sobald es welche gibt – gerne per Pull Request ergänzen!
