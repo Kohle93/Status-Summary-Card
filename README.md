@@ -1,3 +1,7 @@
+<img width="300" height="83" alt="showcase-transparent" src="https://github.com/user-attachments/assets/d3bfafcf-93ed-47d7-b16f-221350757225" />
+<img width="300" height="67" alt="showcase-solid" src="https://github.com/user-attachments/assets/ed4a6bf5-c679-4f13-b184-5d797f84cf1c" />
+<img width="300" height="138" alt="gallery-modes" src="https://github.com/user-attachments/assets/aa28a672-b640-48a5-81b1-bf05d0d4c50c" />
+<img width="300" height="78" alt="color-palette" src="https://github.com/user-attachments/assets/baace127-b228-4e92-b374-d00d12a48bd2" />
 # 🏠 Status-Übersicht-Karte
 
 Eine schlanke Lovelace-Karte für Home Assistant, die auf einen Blick zeigt, wie viele
