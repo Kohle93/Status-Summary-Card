@@ -1,0 +1,54 @@
+<svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <rect width="900" height="220" fill="#15161b"/>
+
+  <text x="450" y="26" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">Darstellung „Chip“ – deutlich kompakter als die volle Karte</text>
+
+  <!-- Einzelne Chips -->
+  <text x="20" y="58" fill="#9ea0a8" font-size="11">Einzeln:</text>
+  <g transform="translate(90,40)">
+    <rect width="150" height="34" rx="17" fill="#24262d"/>
+    <circle cx="24" cy="17" r="11" fill="#2d1f45"/>
+    <rect x="19" y="12" width="10" height="10" rx="2" fill="none" stroke="#a259ff" stroke-width="2"/>
+    <text x="42" y="21" fill="#ffffff" font-size="11" font-weight="600">3 Rollläden offen</text>
+  </g>
+  <g transform="translate(260,40)">
+    <rect width="150" height="34" rx="17" fill="#24262d"/>
+    <circle cx="24" cy="17" r="11" fill="#3a2f10"/>
+    <circle cx="24" cy="14" r="5.5" fill="none" stroke="#ffc107" stroke-width="2"/>
+    <text x="42" y="21" fill="#ffffff" font-size="11" font-weight="600">5 Lampen an</text>
+  </g>
+  <g transform="translate(430,40)">
+    <rect width="150" height="34" rx="17" fill="#24262d"/>
+    <circle cx="24" cy="17" r="11" fill="#3a1f1f"/>
+    <rect x="19" y="11" width="10" height="12" rx="2" fill="none" stroke="#f44336" stroke-width="2"/>
+    <text x="42" y="21" fill="#ffffff" font-size="11" font-weight="600">2 Batterien schwach</text>
+  </g>
+
+  <!-- Chip-Verbund -->
+  <text x="20" y="118" fill="#9ea0a8" font-size="11">Als Verbund (eine Karte, 4 Chips):</text>
+  <rect x="20" y="130" width="560" height="60" rx="18" fill="none" stroke="#3a3c44" stroke-width="2" stroke-dasharray="6 5"/>
+
+  <g transform="translate(36,145)">
+    <rect width="120" height="30" rx="15" fill="#24262d"/>
+    <circle cx="20" cy="15" r="9" fill="#2d1f45"/>
+    <text x="34" y="19" fill="#ffffff" font-size="9.5" font-weight="600">3 Rollläden</text>
+  </g>
+  <g transform="translate(164,145)">
+    <rect width="120" height="30" rx="15" fill="#24262d"/>
+    <circle cx="20" cy="15" r="9" fill="#1f2d22"/>
+    <text x="34" y="19" fill="#ffffff" font-size="9.5" font-weight="600">Fenster zu</text>
+  </g>
+  <g transform="translate(292,145)">
+    <rect width="120" height="30" rx="15" fill="#24262d"/>
+    <circle cx="20" cy="15" r="9" fill="#3a2f10"/>
+    <text x="34" y="19" fill="#ffffff" font-size="9.5" font-weight="600">5 Lampen an</text>
+  </g>
+  <g transform="translate(420,145)">
+    <rect width="120" height="30" rx="15" fill="#24262d"/>
+    <circle cx="20" cy="15" r="9" fill="#1f2d22"/>
+    <text x="34" y="19" fill="#ffffff" font-size="9.5" font-weight="600">Akkus OK</text>
+  </g>
+
+  <text x="600" y="55" fill="#787b85" font-size="10" width="280">appearance:</text>
+  <text x="600" y="72" fill="#c9cbd1" font-size="10">chip</text>
+</svg>
