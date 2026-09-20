@@ -10,12 +10,12 @@ sind – komplett über das UI konfigurierbar, ganz ohne YAML.
 
 - **4 eingebaute Modi**: Rollläden, Fenster & Türen, Lampen, Batterien
 - **Verbund-Modus**: alle 4 Kategorien in einer einzigen Karte, als Reihe oder 2×2-Raster
-- **Zwei Erscheinungsformen**: volle Karte oder kompakter Chip
+- **Zwei Erscheinungsformen**: volle Karte oder kompakter Chip (auch im Verbund alle gleich groß)
 - **Alles im visuellen Editor konfigurierbar** – kein YAML nötig
-- **"Alle passenden Entitäten hinzufügen"-Button** im Editor, statt jede Entität einzeln zu suchen
+- **"Alle passenden Entitäten hinzufügen"-Button** im Editor (auch im Verbund für alle 4 Kategorien auf einmal), optional eingegrenzt auf bestimmte Bereiche/Etagen
 - **Eigene Icons und Farben für aktiven und inaktiven Zustand**, per nativem Farbpicker
 - **Zwei Layouts**: vertikal oder horizontal (bzw. Reihe/Raster im Verbund)
-- **Zwei Hintergründe**: normal (Karten-Hintergrund) oder transparent mit Blur-Effekt
+- **Frei wählbare Hintergrundfarbe mit eigenem Transparenz-Regler**, zusätzlich zum normalen/transparenten Glas-Effekt
 - **Icon-Größe und Schriftgröße** frei per Regler einstellbar
 - **Größenanpassung per Drag & Drop** in der Bereiche-Ansicht
 - **Frei konfigurierbare Tap-Action** (Navigieren, Mehr-Info, URL, Service-Aufruf)
@@ -286,6 +286,21 @@ battery_entities:
   - sensor.hue_motion_sensor_1_battery
 ```
 
+### 🎨 Freie Hintergrundfarbe mit Transparenz-Regler
+
+```yaml
+type: custom:status-summary-card
+mode: light
+entities:
+  - light.wohnzimmer_decke
+  - light.kueche_arbeitsplatte
+background_color: [26, 35, 126]
+background_opacity: 55
+icon_color_active: amber
+icon_color_inactive: "#ffffff"
+style: transparent
+```
+
 ## ⚙️ Konfigurationsoptionen
 
 | Option                 | Typ     | Standard   | Beschreibung                                                                 |
@@ -296,6 +311,8 @@ battery_entities:
 | `door_window_entities`   | list    | `[]`       | Nur bei `mode: combo`: Fenster-/Türen-Entitäten                              |
 | `light_entities`         | list    | `[]`       | Nur bei `mode: combo`: Lampen-Entitäten                                       |
 | `battery_entities`       | list    | `[]`       | Nur bei `mode: combo`: Batterie-Entitäten                                     |
+| `filter_areas`           | list    | `[]`       | Nur für den „Alle hinzufügen"-Button: Suche auf diese Bereiche einschränken   |
+| `filter_floors`          | list    | `[]`       | Nur für den „Alle hinzufügen"-Button: Suche auf diese Etagen einschränken     |
 | `expand_groups`          | boolean | `false`    | Gruppen-Entitäten (z.B. eine Lampengruppe) in ihre Mitglieder auflösen und diese statt der Gruppe selbst zählen |
 | `name`                   | string  | –          | Überschreibt den automatisch generierten Text (nicht bei `mode: combo`)      |
 | `icon_active`            | string  | –          | Icon bei aktivem Zustand (offen/an/schwach); sonst automatisches Standard-Icon (nicht bei `mode: combo`) |
@@ -305,7 +322,9 @@ battery_entities:
 | `battery_threshold`      | number  | `20`       | Nur Modus `battery`/`combo`: Schwellwert in % für "schwach"                   |
 | `layout`                 | string  | `vertical` | `vertical`/`horizontal` normal, `row`/`grid` bei `mode: combo`                |
 | `appearance`             | string  | `card`     | `card` (volle Karte) oder `chip` (kompakte Pille)                            |
-| `style`                  | string  | `solid`    | `solid` oder `transparent`                                                    |
+| `style`                  | string  | `solid`    | `solid` oder `transparent` (Glas-Effekt)                                      |
+| `background_color`       | [r,g,b] | –          | Frei wählbare Hintergrundfarbe (Farbpicker), überschreibt `style` farblich, Blur bei `transparent` bleibt erhalten |
+| `background_opacity`     | number  | –          | Transparenz des Hintergrunds in % (0–100). Ohne eigene Angabe: 30% bei `transparent`, 100% bei `solid` |
 | `icon_size`              | number  | `32`       | Icon-Größe in px                                                              |
 | `font_size`              | number  | `13`       | Schriftgröße in px                                                            |
 | `tap_action`             | action  | –          | Standard-HA-Aktion beim Antippen der Karte                                    |

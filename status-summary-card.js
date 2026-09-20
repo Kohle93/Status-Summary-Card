@@ -9,6 +9,8 @@
  *   - combo:       alle 4 Kategorien zusammen in einer Karte
  *
  * Darstellung: als volle Karte ("card") oder als kompakter Chip ("chip").
+ * Hintergrund: Standard (Theme), transparent mit Blur, oder komplett freie
+ * Farbe + Transparenz-Regler.
  *
  * Installation:
  *   1. Diese Datei z.B. nach /config/www/status-summary-card.js kopieren
@@ -132,13 +134,24 @@ const CARD_CSS = `
   }
   .ssc-tilebox.vertical { flex-direction: column; gap: 8px; padding: 16px 12px; }
   .ssc-tilebox.horizontal { flex-direction: row; gap: 12px; padding: 10px 16px; }
+  /* Chip: eigenständig kompakt und am Inhalt orientiert ... */
   .ssc-tilebox.chip {
     flex-direction: row;
     gap: 6px;
     padding: 6px 12px;
     width: auto;
+    height: auto;
     max-width: 100%;
     margin: auto;
+  }
+  /* ...aber innerhalb des Verbunds füllt jeder Chip seine Rasterzelle in der
+     Breite, damit alle 4 Chips gleich groß aussehen, egal wie lang der Text ist. */
+  .ssc-combo .ssc-tilebox.chip {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    align-self: center;
+    box-sizing: border-box;
   }
   .ssc-icon {
     width: var(--ssc-icon-size, 32px);
@@ -229,9 +242,9 @@ class StatusSummaryCard extends HTMLElement {
     };
   }
 
-  // Baut (nur bei Bedarf, wenn sich Modus/Darstellung/Layout strukturell
-  // geändert haben) die innere DOM-Struktur neu auf: entweder eine einzelne
-  // Kachel (Einzelmodus) oder ein Raster/eine Reihe aus 4 Kacheln (Verbund).
+  // Baut (nur bei Bedarf, wenn sich Modus/Layout strukturell geändert haben)
+  // die innere DOM-Struktur neu auf: entweder eine einzelne Kachel
+  // (Einzelmodus) oder ein Raster/eine Reihe aus 4 Kacheln (Verbund).
   _ensureDom() {
     const isCombo = this._config.mode === 'combo';
     const comboLayout = this._config.layout === 'grid' ? 'grid' : 'row';
@@ -326,24 +339,48 @@ class StatusSummaryCard extends HTMLElement {
     return { active, total };
   }
 
+  // Hintergrund/Rahmen/Form einer Kachel. Reihenfolge der Priorität:
+  //   1. Eine frei gewählte Hintergrundfarbe (background_color) + der
+  //      Transparenz-Regler (background_opacity) gelten IMMER, wenn gesetzt –
+  //      unabhängig von "solid"/"transparent".
+  //   2. Ohne eigene Farbe: "transparent" = schwarzes Glas mit Blur (Stärke
+  //      ebenfalls über background_opacity einstellbar, Standard 30%).
+  //   3. Ohne eigene Farbe und "solid": normaler Theme-Kartenhintergrund.
   _applyBoxStyle(el) {
     const isChip = el.classList.contains('chip');
-    if (this._config.style === 'transparent') {
+    const useBlur = this._config.style === 'transparent';
+    const customColor = this._config.background_color;
+    const hasCustomColor = Array.isArray(customColor) && customColor.length === 3;
+    const opacity =
+      this._config.background_opacity != null
+        ? Math.max(0, Math.min(100, this._config.background_opacity)) / 100
+        : useBlur
+        ? 0.3
+        : 1;
+
+    el.style.borderRadius = isChip ? '999px' : '14px';
+
+    if (useBlur) {
       el.style.setProperty('border', 'none', 'important');
       el.style.setProperty('box-shadow', 'none', 'important');
-      el.style.background = 'rgba(0,0,0,0.3)';
-      el.style.borderRadius = isChip ? '999px' : '14px';
       el.style.backdropFilter = 'blur(6px)';
       el.style.webkitBackdropFilter = 'blur(6px)';
       el.style.color = 'white';
     } else {
       el.style.removeProperty('border');
       el.style.setProperty('box-shadow', '0 1px 3px rgba(0,0,0,0.3)');
-      el.style.background = 'var(--ha-card-background, var(--card-background-color, #1c1c1c))';
-      el.style.borderRadius = isChip ? '999px' : '14px';
       el.style.backdropFilter = '';
       el.style.webkitBackdropFilter = '';
       el.style.color = '';
+    }
+
+    if (hasCustomColor) {
+      const [r, g, b] = customColor;
+      el.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    } else if (useBlur) {
+      el.style.background = `rgba(0, 0, 0, ${opacity})`;
+    } else {
+      el.style.background = 'var(--ha-card-background, var(--card-background-color, #1c1c1c))';
     }
   }
 
@@ -433,6 +470,8 @@ const FIELD_LABELS = {
   door_window_entities: 'Fenster & Türen – Entitäten',
   light_entities: 'Lampen – Entitäten',
   battery_entities: 'Batterien – Entitäten',
+  filter_areas: 'Nur diese(n) Bereich(e) berücksichtigen (für den Button unten)',
+  filter_floors: 'Nur diese(n) Etage(n) berücksichtigen (für den Button unten)',
   expand_groups: 'Gruppen auflösen (Mitglieder statt Gruppe zählen)',
   name: 'Name (optional, überschreibt automatischen Text)',
   icon_active: 'Icon – aktiv (z.B. offen/an/schwach)',
@@ -442,7 +481,9 @@ const FIELD_LABELS = {
   battery_threshold: 'Schwellwert schwache Batterie (%)',
   layout: 'Layout',
   appearance: 'Darstellung (Karte/Chip)',
-  style: 'Hintergrund',
+  style: 'Hintergrund-Art',
+  background_color: 'Eigene Hintergrundfarbe (überschreibt Hintergrund-Art)',
+  background_opacity: 'Hintergrund-Transparenz (%)',
   icon_size: 'Icon-Größe',
   font_size: 'Schriftgröße',
   tap_action: 'Aktion bei Tippen',
@@ -501,7 +542,19 @@ class StatusSummaryCardEditor extends HTMLElement {
         { name: 'covers_entities', selector: { entity: { multiple: true, filter: MODES.covers.filter } } },
         { name: 'door_window_entities', selector: { entity: { multiple: true, filter: MODES.door_window.filter } } },
         { name: 'light_entities', selector: { entity: { multiple: true, filter: MODES.light.filter } } },
-        { name: 'battery_entities', selector: { entity: { multiple: true, filter: MODES.battery.filter } } },
+        { name: 'battery_entities', selector: { entity: { multiple: true, filter: MODES.battery.filter } } }
+      );
+    } else {
+      schema.push({ name: 'entities', selector: { entity: { multiple: true, filter: MODES[mode]?.filter } } });
+    }
+
+    schema.push(
+      { name: 'filter_areas', selector: { area: { multiple: true } } },
+      { name: 'filter_floors', selector: { floor: { multiple: true } } }
+    );
+
+    if (isCombo) {
+      schema.push(
         { name: 'battery_threshold', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
         { name: 'expand_groups', selector: { boolean: {} } },
         { name: 'icon_color_active', selector: { ui_color: { include_none: true } } },
@@ -521,7 +574,6 @@ class StatusSummaryCardEditor extends HTMLElement {
       );
     } else {
       schema.push(
-        { name: 'entities', selector: { entity: { multiple: true, filter: MODES[mode]?.filter } } },
         { name: 'expand_groups', selector: { boolean: {} } },
         { name: 'name', selector: { text: {} } },
         { name: 'icon_active', selector: { icon: {} } },
@@ -571,11 +623,13 @@ class StatusSummaryCardEditor extends HTMLElement {
             mode: 'dropdown',
             options: [
               { value: 'solid', label: 'Normal (Karten-Hintergrund)' },
-              { value: 'transparent', label: 'Transparent' },
+              { value: 'transparent', label: 'Transparent / Glas-Effekt' },
             ],
           },
         },
       },
+      { name: 'background_color', selector: { color_rgb: {} } },
+      { name: 'background_opacity', selector: { number: { min: 0, max: 100, step: 5, mode: 'slider', unit_of_measurement: '%' } } },
       { name: 'icon_size', selector: { number: { min: 16, max: 64, step: 1, mode: 'slider', unit_of_measurement: 'px' } } },
       { name: 'font_size', selector: { number: { min: 8, max: 28, step: 1, mode: 'slider', unit_of_measurement: 'px' } } },
       { name: 'tap_action', selector: { ui_action: {} } }
@@ -584,19 +638,58 @@ class StatusSummaryCardEditor extends HTMLElement {
     return schema;
   }
 
-  _addAllMatching() {
-    if (!this._hass || !this._config || this._config.mode === 'combo') return;
+  // Alle Areas, die zu den gewählten Etagen gehören, plus die direkt
+  // gewählten Areas – zusammen die Menge, auf die der "Alle hinzufügen"-
+  // Button die Suche einschränkt (leere Menge = keine Einschränkung).
+  _resolveAreaFilterIds() {
+    const areaIds = new Set(this._config.filter_areas || []);
+    const floorIds = this._config.filter_floors || [];
+    if (floorIds.length && this._hass?.areas) {
+      Object.values(this._hass.areas).forEach((area) => {
+        if (area.floor_id && floorIds.includes(area.floor_id)) areaIds.add(area.area_id);
+      });
+    }
+    return areaIds;
+  }
 
-    const filters = MODES[this._config.mode]?.filter;
-    const matching = Object.values(this._hass.states)
+  _getEntityAreaId(entityId) {
+    const entry = this._hass?.entities?.[entityId];
+    if (!entry) return null;
+    if (entry.area_id) return entry.area_id;
+    if (entry.device_id) return this._hass?.devices?.[entry.device_id]?.area_id || null;
+    return null;
+  }
+
+  _matchingEntitiesFor(modeKey) {
+    const filters = MODES[modeKey]?.filter;
+    const areaIds = this._resolveAreaFilterIds();
+    return Object.values(this._hass.states)
       .filter((stateObj) => matchesFilter(stateObj, filters))
+      .filter((stateObj) => (areaIds.size ? areaIds.has(this._getEntityAreaId(stateObj.entity_id)) : true))
       .map((stateObj) => stateObj.entity_id)
       .sort();
+  }
 
-    const current = this._config.entities || [];
-    const merged = Array.from(new Set([...current, ...matching]));
+  _addAllMatching() {
+    if (!this._hass || !this._config) return;
+    const isCombo = this._config.mode === 'combo';
+    let updated;
 
-    this._config = { ...this._config, entities: merged };
+    if (isCombo) {
+      updated = { ...this._config };
+      COMBO_KEYS.forEach((key) => {
+        const field = `${key}_entities`;
+        const matching = this._matchingEntitiesFor(key);
+        const current = updated[field] || [];
+        updated[field] = Array.from(new Set([...current, ...matching]));
+      });
+    } else {
+      const matching = this._matchingEntitiesFor(this._config.mode);
+      const current = this._config.entities || [];
+      updated = { ...this._config, entities: Array.from(new Set([...current, ...matching])) };
+    }
+
+    this._config = updated;
     this.dispatchEvent(
       new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true })
     );
@@ -643,8 +736,11 @@ class StatusSummaryCardEditor extends HTMLElement {
 
     const isCombo = this._config.mode === 'combo';
     const modeCfg = MODES[this._config.mode] || MODES.covers;
-    this._addAllButton.style.display = isCombo ? 'none' : 'block';
-    this._addAllButton.textContent = `+ Alle „${modeCfg.label}“-Entitäten hinzufügen`;
+    const areaIds = this._resolveAreaFilterIds();
+    const scopeSuffix = areaIds.size ? ' (nur gewählter Bereich/Etage)' : '';
+    this._addAllButton.textContent = isCombo
+      ? `+ Alle passenden Entitäten aller 4 Kategorien hinzufügen${scopeSuffix}`
+      : `+ Alle „${modeCfg.label}“-Entitäten hinzufügen${scopeSuffix}`;
 
     this._form.hass = this._hass;
     this._form.data = this._config;
@@ -661,5 +757,5 @@ window.customCards.push({
   type: 'status-summary-card',
   name: 'Status-Übersicht-Karte',
   description:
-    'Zeigt dynamisch den Status von Rollläden, Fenstern/Türen, Lampen oder Batterien an – einzeln oder im Verbund, als Karte oder Chip, frei konfigurierbar im UI.',
+    'Zeigt dynamisch den Status von Rollläden, Fenstern/Türen, Lampen oder Batterien an – einzeln oder im Verbund, als Karte oder Chip, mit frei wählbarer Hintergrundfarbe und -transparenz.',
 });
