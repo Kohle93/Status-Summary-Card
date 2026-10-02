@@ -15,7 +15,9 @@
  * Farbe/transparent) mit Transparenz, Farbverlauf und Glas-Effekt (Blur),
  * Symbol-Hintergrund mit Form, Text- und Rahmenfarbe, Schatten, Eckenradius,
  * Abstände sowie eine Hervorhebung (Leuchten/Pulsieren/Rahmen/Vergrößern),
- * solange der "aktive" Zustand vorliegt (z.B. Fenster offen). Editor mit
+ * solange der "aktive" Zustand vorliegt (z.B. Fenster offen). Zusätzlich –
+ * wie bei der EV Charge Card – eine eigene Deckkraft/Hintergrund für die
+ * ganze Karte, getrennt von der Deckkraft der einzelnen Kachel. Editor mit
  * denselben Tabs/Gruppen-Bausteinen wie in der Abfall-Karte, damit sich
  * beide Karten gleich bedienen.
  *
@@ -27,7 +29,7 @@
  *   3. Karte hinzufügen -> "Status-Übersicht-Karte" auswählen (per UI konfigurierbar)
  */
 
-const CARD_VERSION = '2.0.0';
+const CARD_VERSION = '2.1.0';
 const CARD_TYPE = 'status-summary-card';
 const EDITOR_TYPE = 'status-summary-card-editor';
 
@@ -159,6 +161,13 @@ const DEFAULTS = {
   battery_threshold: 20,
   icon_size: 32,
   font_size: 13,
+
+  // Karte (Hintergrund hinter allen Kacheln, separat von der Kachel-Deckkraft
+  // unten – wie bei der EV Charge Card: eigene Deckkraft für die ganze Karte)
+  card_bg_mode: 'none',
+  card_bg_opacity: 100,
+  card_bg_gradient: false,
+  card_blur: 0,
 
   // Design (wie bei der Abfall-Karte)
   bg_mode: 'theme',
@@ -298,6 +307,28 @@ const tileVars = (state, cfg) => {
   return { vars, highlight: cfg.highlight || DEFAULTS.highlight };
 };
 
+// Hintergrund der ganzen Karte (ha-card) – unabhängig von der Deckkraft der
+// einzelnen Kacheln. Unterstützt nur theme/custom/none (kein "tinted"/"accent",
+// da die Karte selbst keinem Aktiv-/Inaktiv-Zustand zugeordnet ist), sonst
+// exakt dieselbe Formel wie bei der EV Charge Card.
+const cardVars = (cfg) => {
+  const mode = cfg.card_bg_mode || DEFAULTS.card_bg_mode;
+  const op = Number(cfg.card_bg_opacity ?? DEFAULTS.card_bg_opacity);
+  let bg = 'transparent';
+  if (mode === 'theme') {
+    bg = withAlpha(THEME_BG, op);
+  } else if (mode === 'custom') {
+    const info = colorInfo(cfg.card_bg_color) || colorInfo([255, 255, 255]);
+    bg = cfg.card_bg_gradient
+      ? `linear-gradient(135deg, ${withAlpha(info.css, op)} 0%, ${withAlpha(`color-mix(in srgb, ${info.css} 62%, black)`, op)} 100%)`
+      : withAlpha(info.css, op);
+  }
+  return {
+    '--ssc-card-bg': bg,
+    '--ssc-card-bf': Number(cfg.card_blur) > 0 ? `blur(${cfg.card_blur}px)` : 'none',
+  };
+};
+
 const styleString = (vars) => Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
 
 const layoutVars = (cfg) => ({
@@ -319,7 +350,9 @@ const CARD_CSS = `
     display: flex;
     cursor: pointer;
     overflow: visible;
-    background: none;
+    background: var(--ssc-card-bg, none);
+    backdrop-filter: var(--ssc-card-bf, none);
+    -webkit-backdrop-filter: var(--ssc-card-bf, none);
     box-shadow: none;
     border: none;
   }
@@ -600,7 +633,7 @@ class StatusSummaryCard extends HTMLElement {
       boxEl.setAttribute('style', styleString(vars));
     });
 
-    const lv = layoutVars(cfg);
+    const lv = { ...layoutVars(cfg), ...cardVars(cfg) };
     Object.entries(lv).forEach(([k, v]) => this._cardEl.style.setProperty(k, v));
   }
 
@@ -656,6 +689,7 @@ const T = {
   groups: {
     entities: 'Entitäten', filter: 'Bereich / Etage einschränken', behaviour: 'Verhalten',
     icons: 'Symbol & Farbe (aktiv / inaktiv)',
+    card_bg: 'Karte (Hintergrund hinter allen Kacheln)',
     bg: 'Hintergrund & Transparenz', icon: 'Symbol', text: 'Text',
     frame: 'Rahmen, Form & Abstände', highlight: 'Hervorhebung bei Aktivität',
   },
@@ -678,6 +712,8 @@ const T = {
     layout: 'Layout',
     appearance: 'Darstellung (Karte/Chip)',
     tap_action: 'Aktion bei Tippen',
+    card_bg_mode: 'Hintergrund der Karte', card_bg_color: 'Farbe der Karte', card_bg_opacity: 'Deckkraft der Karte',
+    card_bg_gradient: 'Farbverlauf', card_blur: 'Unschärfe hinter der Karte (Glas-Effekt)',
     bg_mode: 'Hintergrund', bg_color: 'Hintergrundfarbe', bg_opacity: 'Deckkraft / Farbstärke', bg_gradient: 'Farbverlauf',
     blur: 'Unschärfe dahinter (Glas-Effekt)',
     icon_size: 'Symbolgröße', icon_bg_mode: 'Symbol-Hintergrund', icon_bg_color: 'Eigene Farbe Symbol-Hintergrund',
@@ -690,11 +726,14 @@ const T = {
   helpers: {
     expand_groups: 'Gruppen-Entitäten (z.B. eine Lampengruppe) werden in ihre Mitglieder aufgelöst und einzeln gezählt.',
     filter_areas: 'Schränkt nur den „Alle hinzufügen“-Button unten ein, nicht die bereits gewählten Entitäten.',
+    card_bg_opacity: 'Gilt für die ganze Karte (als Fläche hinter allen Kacheln), zusätzlich zur Deckkraft der einzelnen Kachel oben.',
+    card_blur: 'Der Bereich hinter der ganzen Karte wird unscharf durchscheinend – wie Milchglas.',
     bg_opacity: 'Bei „Theme + Farbton“ ist das die Stärke des Farbtons.',
     blur: 'Der Hintergrund hinter der Kachel wird unscharf durchscheinend – wie Milchglas.',
     highlight: 'Wird nur angezeigt, solange der aktive Zustand vorliegt (z.B. Fenster offen, Batterie schwach).',
   },
   opt: {
+    card_bg_mode: { theme: 'Theme-Hintergrund', custom: 'Eigene Farbe', none: 'Transparent (kein eigener Kartenhintergrund)' },
     bg_mode: { theme: 'Karten-Hintergrund (Theme)', tinted: 'Theme + Farbton', accent: 'Volle Akzentfarbe', custom: 'Eigene Farbe', none: 'Transparent (kein Hintergrund)' },
     icon_bg_mode: { none: 'Keiner', accent: 'Akzentfarbe', theme: 'Karten-Hintergrund', custom: 'Eigene Farbe' },
     icon_shape: { circle: 'Kreis', rounded: 'Abgerundet', square: 'Eckig' },
@@ -730,6 +769,9 @@ const EDITOR_CSS = `
   .pv { padding:14px; margin-bottom:16px; border-radius:14px;
     background: repeating-conic-gradient(rgba(127,127,127,.08) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px, var(--primary-background-color, #f5f5f5); }
   .pv-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color: var(--secondary-text-color); margin-bottom:10px; }
+  .pv-card { padding:10px; border-radius:12px;
+    background: var(--ssc-card-bg, transparent);
+    backdrop-filter: var(--ssc-card-bf, none); -webkit-backdrop-filter: var(--ssc-card-bf, none); }
   .pv-row { display:flex; gap:12px; }
   .pv-row .ssc-tilebox { flex:1; min-width:0; min-height:92px; }
   .pv-row .ssc-name { font-weight:600; }
@@ -875,6 +917,13 @@ class StatusSummaryCardEditor extends HTMLElement {
   _schemaDesign() {
     const v = (k) => this._val(k);
     return [
+      this._group('card_bg', 'mdi:card-outline', [
+        { name: 'card_bg_mode', selector: this._opts('card_bg_mode', ['theme', 'custom', 'none']) },
+        ...(v('card_bg_mode') === 'custom' ? [{ name: 'card_bg_color', selector: { color_rgb: {} } }] : []),
+        ...(v('card_bg_mode') !== 'none' ? [{ name: 'card_bg_opacity', selector: this._num(0, 100, 1, '%') }] : []),
+        ...(v('card_bg_mode') === 'custom' ? [{ name: 'card_bg_gradient', selector: { boolean: {} } }] : []),
+        { name: 'card_blur', selector: this._num(0, 30, 1, 'px') },
+      ], true),
       this._group('bg', 'mdi:format-color-fill', [
         { name: 'bg_mode', selector: this._opts('bg_mode', ['theme', 'tinted', 'accent', 'custom', 'none']) },
         ...(v('bg_mode') === 'custom' ? [{ name: 'bg_color', selector: { color_rgb: {} } }] : []),
@@ -999,6 +1048,7 @@ class StatusSummaryCardEditor extends HTMLElement {
   _renderPreview() {
     const cfg = this._config;
     const lv = layoutVars(cfg);
+    const cv = cardVars(cfg);
     const mk = (state) => {
       const { vars, highlight } = tileVars(state, cfg);
       const isHl = state === 'active' && highlight && highlight !== 'none';
@@ -1008,7 +1058,7 @@ class StatusSummaryCardEditor extends HTMLElement {
       const label = state === 'active' ? this._t('preview_active') : this._t('preview_inactive');
       return `<div class="${cls}" style="${esc(styleString(vars))}"><ha-icon class="ssc-icon" icon="${esc(icon)}"></ha-icon><div class="ssc-name">${esc(label)}</div></div>`;
     };
-    this._pv.innerHTML = `<div class="pv-label">${esc(this._t('preview'))}</div><div class="pv-row" style="${esc(styleString(lv))}">${mk('active')}${mk('inactive')}</div>`;
+    this._pv.innerHTML = `<div class="pv-label">${esc(this._t('preview'))}</div><div class="pv-card" style="${esc(styleString(cv))}"><div class="pv-row" style="${esc(styleString(lv))}">${mk('active')}${mk('inactive')}</div></div>`;
   }
 
   /* ---------- "Alle passenden Entitäten hinzufügen" ---------- */
@@ -1095,6 +1145,8 @@ class StatusSummaryCardEditor extends HTMLElement {
       if (JSON.stringify(cfg[k]) === JSON.stringify(DEFAULTS[k]) && this._config[k] === undefined) delete cfg[k];
     });
     if (cfg.mode !== 'battery' && cfg.mode !== 'combo') delete cfg.battery_threshold;
+    if (cfg.card_bg_mode !== 'custom') { delete cfg.card_bg_color; delete cfg.card_bg_gradient; }
+    if (!cfg.card_bg_mode || cfg.card_bg_mode === 'none') delete cfg.card_bg_opacity;
     if (cfg.bg_mode !== 'custom') delete cfg.bg_color;
     if (!cfg.bg_mode || cfg.bg_mode === 'none') delete cfg.bg_opacity;
     if (!['tinted', 'accent', 'custom'].includes(cfg.bg_mode)) delete cfg.bg_gradient;
