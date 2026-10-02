@@ -19,9 +19,16 @@
  * wie bei der EV Charge Card / Power-Flow-Karte (radial-flow-card) – eine
  * eigene Deckkraft/Hintergrund für die ganze Karte, getrennt von der
  * Deckkraft der einzelnen Kachel, inklusive "Theme + Farbton"-Modus mit
- * eigener Akzentfarbe für denselben weichen Glow-Effekt. Editor mit
- * denselben Tabs/Gruppen-Bausteinen wie in der Abfall-Karte, damit sich
- * beide Karten gleich bedienen.
+ * eigener Akzentfarbe für denselben weichen Glow-Effekt. Bei einer
+ * einzelnen Kategorie (nicht "combo") ist die Kachel-Hintergrundgruppe
+ * ausgeblendet und die Karten-Hintergrundgruppe bestimmt den gesamten
+ * sichtbaren Hintergrund – so wirkt sich "Deckkraft der Karte" in jedem
+ * Modus tatsächlich aus. Alle Farbfelder (Symbol aktiv/inaktiv, Akzent-,
+ * Rahmen- und Textfarbe) liegen im Tab "Design", Symbolauswahl/-verhalten
+ * im Tab "Allgemein" – identisch zur Aufteilung in Trash Card Plus / EV
+ * Charge Card / Power-Flow-Karte. Editor mit denselben Tabs/Gruppen-
+ * Bausteinen wie in der Abfall-Karte, damit sich alle Karten gleich
+ * bedienen.
  *
  * Installation:
  *   1. Diese Datei z.B. nach /config/www/status-summary-card.js kopieren
@@ -31,7 +38,7 @@
  *   3. Karte hinzufügen -> "Status-Übersicht-Karte" auswählen (per UI konfigurierbar)
  */
 
-const CARD_VERSION = '2.2.0';
+const CARD_VERSION = '2.3.0';
 const CARD_TYPE = 'status-summary-card';
 const EDITOR_TYPE = 'status-summary-card-editor';
 
@@ -166,7 +173,7 @@ const DEFAULTS = {
 
   // Karte (Hintergrund hinter allen Kacheln, separat von der Kachel-Deckkraft
   // unten – wie bei der EV Charge Card: eigene Deckkraft für die ganze Karte)
-  card_bg_mode: 'none',
+  card_bg_mode: 'theme',
   card_bg_opacity: 100,
   card_bg_gradient: false,
   card_blur: 0,
@@ -310,9 +317,12 @@ const tileVars = (state, cfg) => {
 };
 
 // Hintergrund der ganzen Karte (ha-card) – unabhängig von der Deckkraft der
-// einzelnen Kacheln. Unterstützt nur theme/custom/none (kein "tinted"/"accent",
-// da die Karte selbst keinem Aktiv-/Inaktiv-Zustand zugeordnet ist), sonst
-// exakt dieselbe Formel wie bei der EV Charge Card.
+// einzelnen Kacheln. Unterstützt theme/tinted/accent/custom/none, exakt
+// dieselbe Formel wie bei EV Charge Card bzw. Power-Flow-Karte. Im Einzel-
+// Modus (nicht "combo") ist dies der EINZIGE Hintergrund, der sichtbar ist –
+// siehe _update()/_renderPreview(), die dort die Kachel-eigenen Hintergrund-
+// Variablen durch diese hier überschreiben, damit "Deckkraft der Karte"
+// tatsächlich etwas bewirkt.
 const cardVars = (cfg) => {
   const mode = cfg.card_bg_mode || DEFAULTS.card_bg_mode;
   const op = Number(cfg.card_bg_opacity ?? DEFAULTS.card_bg_opacity);
@@ -615,6 +625,7 @@ class StatusSummaryCard extends HTMLElement {
     const isCombo = cfg.mode === 'combo';
     const appearance = cfg.appearance === 'chip' ? 'chip' : 'card';
     const layoutClass = cfg.layout === 'horizontal' ? 'horizontal' : 'vertical';
+    const cv = cardVars(cfg);
 
     this._tileRefs.forEach(({ key, boxEl, iconEl, nameEl }) => {
       const modeCfg = MODES[key];
@@ -636,6 +647,13 @@ class StatusSummaryCard extends HTMLElement {
       iconEl.setAttribute('icon', icon);
 
       const { vars, highlight } = tileVars(state, cfg);
+      if (!isCombo) {
+        // Im Einzel-Modus füllt die eine Kachel die gesamte Karte, daher
+        // bestimmt ausschließlich die "Karte"-Gruppe den Hintergrund –
+        // sonst würde die Kachel ihn vollständig verdecken.
+        vars['--ssc-bg'] = cv['--ssc-card-bg'];
+        vars['--ssc-bf'] = cv['--ssc-card-bf'];
+      }
       const isHl = state === 'active' && highlight && highlight !== 'none';
       const cls = ['ssc-tilebox', appearance === 'chip' ? 'chip' : layoutClass];
       if (isHl) cls.push(`hl-${highlight}`);
@@ -643,7 +661,7 @@ class StatusSummaryCard extends HTMLElement {
       boxEl.setAttribute('style', styleString(vars));
     });
 
-    const lv = { ...layoutVars(cfg), ...cardVars(cfg) };
+    const lv = { ...layoutVars(cfg), ...cv };
     Object.entries(lv).forEach(([k, v]) => this._cardEl.style.setProperty(k, v));
   }
 
@@ -692,15 +710,15 @@ class StatusSummaryCard extends HTMLElement {
 const T = {
   tabs: { general: 'Allgemein', display: 'Anzeige', design: 'Design' },
   intro: {
-    general: 'Welche Entitäten sollen ausgewertet werden – und mit welchem Symbol/welcher Farbe reagiert die Karte auf „aktiv“ bzw. „inaktiv“?',
+    general: 'Welche Entitäten sollen ausgewertet werden – und mit welchem Symbol reagiert die Karte auf „aktiv“ bzw. „inaktiv“? Die Farben dazu finden sich im Tab „Design“.',
     display: 'Grundlayout der Karte: Ausrichtung, Darstellung als Karte oder Chip, Verbund-Anordnung.',
-    design: 'Hintergrund, Transparenz und Hervorhebung – genau wie bei der Abfall-Karte individuell einstellbar. Die Vorschau zeigt sofort das Ergebnis.',
+    design: 'Farben, Hintergrund, Transparenz und Hervorhebung – genau wie bei der Abfall-Karte und der Power-Flow-Karte individuell einstellbar. Die Vorschau zeigt sofort das Ergebnis. Bei einer einzelnen Kategorie bestimmt die Gruppe „Karte“ den gesamten Hintergrund; bei „Alle 4 Kategorien (Verbund)“ gilt sie für die Fläche hinter den vier Kacheln, während „Hintergrund & Transparenz“ zusätzlich jede Kachel einzeln stylt.',
   },
   groups: {
     entities: 'Entitäten', filter: 'Bereich / Etage einschränken', behaviour: 'Verhalten',
-    icons: 'Symbol & Farbe (aktiv / inaktiv)',
+    icon_choice: 'Symbol (aktiv / inaktiv)',
     card_bg: 'Karte (Hintergrund hinter allen Kacheln)',
-    bg: 'Hintergrund & Transparenz', icon: 'Symbol', text: 'Text',
+    bg: 'Hintergrund & Transparenz (je Kachel im Verbund)', icon: 'Symbol', text: 'Text',
     frame: 'Rahmen, Form & Abstände', highlight: 'Hervorhebung bei Aktivität',
   },
   fields: {
@@ -736,7 +754,9 @@ const T = {
   helpers: {
     expand_groups: 'Gruppen-Entitäten (z.B. eine Lampengruppe) werden in ihre Mitglieder aufgelöst und einzeln gezählt.',
     filter_areas: 'Schränkt nur den „Alle hinzufügen“-Button unten ein, nicht die bereits gewählten Entitäten.',
-    card_bg_opacity: 'Gilt für die ganze Karte (als Fläche hinter allen Kacheln), zusätzlich zur Deckkraft der einzelnen Kachel oben.',
+    icon_color_active: 'Gilt für das Symbol in allen Kacheln (auch im Verbund), solange der Zustand „aktiv“ vorliegt.',
+    icon_color_inactive: 'Gilt für das Symbol in allen Kacheln (auch im Verbund), solange der Zustand „inaktiv“ vorliegt.',
+    card_bg_opacity: 'Bei einer einzelnen Kategorie die Deckkraft der gesamten Karte; im Verbund zusätzlich zur Deckkraft der einzelnen Kachel unter „Hintergrund & Transparenz“.',
     accent_color: 'Nur bei „Theme + Farbton“ oder „Volle Akzentfarbe“ – derselbe weiche Farbverlauf wie bei der Power-Flow-Karte.',
     card_blur: 'Der Bereich hinter der ganzen Karte wird unscharf durchscheinend – wie Milchglas.',
     bg_opacity: 'Bei „Theme + Farbton“ ist das die Stärke des Farbtons.',
@@ -900,18 +920,14 @@ class StatusSummaryCardEditor extends HTMLElement {
     if (isCombo || this._config.mode === 'battery') behaviourSchema.push({ name: 'battery_threshold', selector: this._num(0, 100, 1, '%') });
     s.push(this._group('behaviour', 'mdi:cog-outline', behaviourSchema));
 
-    const iconSchema = [];
     if (!isCombo) {
-      iconSchema.push({ type: 'grid', name: '', schema: [
-        { name: 'icon_active', selector: { icon: {} } },
-        { name: 'icon_inactive', selector: { icon: {} } },
-      ] });
+      s.push(this._group('icon_choice', 'mdi:palette-swatch-outline', [
+        { type: 'grid', name: '', schema: [
+          { name: 'icon_active', selector: { icon: {} } },
+          { name: 'icon_inactive', selector: { icon: {} } },
+        ] },
+      ], true));
     }
-    iconSchema.push({ type: 'grid', name: '', schema: [
-      { name: 'icon_color_active', selector: { color_rgb: {} } },
-      { name: 'icon_color_inactive', selector: { color_rgb: {} } },
-    ] });
-    s.push(this._group('icons', 'mdi:palette-swatch-outline', iconSchema, true));
 
     return s;
   }
@@ -927,7 +943,12 @@ class StatusSummaryCardEditor extends HTMLElement {
 
   _schemaDesign() {
     const v = (k) => this._val(k);
+    const isCombo = this._config.mode === 'combo';
     return [
+      { type: 'grid', name: '', schema: [
+        { name: 'icon_color_active', selector: { color_rgb: {} } },
+        { name: 'icon_color_inactive', selector: { color_rgb: {} } },
+      ] },
       this._group('card_bg', 'mdi:card-outline', [
         { name: 'card_bg_mode', selector: this._opts('card_bg_mode', ['theme', 'tinted', 'accent', 'custom', 'none']) },
         ...(['tinted', 'accent'].includes(v('card_bg_mode')) ? [{ name: 'accent_color', selector: { color_rgb: {} } }] : []),
@@ -936,13 +957,13 @@ class StatusSummaryCardEditor extends HTMLElement {
         ...(['tinted', 'accent', 'custom'].includes(v('card_bg_mode')) ? [{ name: 'card_bg_gradient', selector: { boolean: {} } }] : []),
         { name: 'card_blur', selector: this._num(0, 30, 1, 'px') },
       ], true),
-      this._group('bg', 'mdi:format-color-fill', [
+      ...(isCombo ? [this._group('bg', 'mdi:format-color-fill', [
         { name: 'bg_mode', selector: this._opts('bg_mode', ['theme', 'tinted', 'accent', 'custom', 'none']) },
         ...(v('bg_mode') === 'custom' ? [{ name: 'bg_color', selector: { color_rgb: {} } }] : []),
         ...(v('bg_mode') !== 'none' ? [{ name: 'bg_opacity', selector: this._num(0, 100, 1, '%') }] : []),
         ...(['tinted', 'accent', 'custom'].includes(v('bg_mode')) ? [{ name: 'bg_gradient', selector: { boolean: {} } }] : []),
         { name: 'blur', selector: this._num(0, 30, 1, 'px') },
-      ], true),
+      ], true)] : []),
       this._group('icon', 'mdi:emoticon-outline', [
         { name: 'icon_size', selector: this._num(16, 64, 1, 'px') },
         { name: 'icon_bg_mode', selector: this._opts('icon_bg_mode', ['none', 'accent', 'theme', 'custom']) },
@@ -1059,10 +1080,15 @@ class StatusSummaryCardEditor extends HTMLElement {
 
   _renderPreview() {
     const cfg = this._config;
+    const isCombo = cfg.mode === 'combo';
     const lv = layoutVars(cfg);
     const cv = cardVars(cfg);
     const mk = (state) => {
       const { vars, highlight } = tileVars(state, cfg);
+      if (!isCombo) {
+        vars['--ssc-bg'] = cv['--ssc-card-bg'];
+        vars['--ssc-bf'] = cv['--ssc-card-bf'];
+      }
       const isHl = state === 'active' && highlight && highlight !== 'none';
       const cls = ['ssc-tilebox', 'vertical', isHl ? `hl-${highlight}` : ''].join(' ').trim();
       const modeCfg = MODES[cfg.mode] || MODES.covers;
