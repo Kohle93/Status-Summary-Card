@@ -16,8 +16,10 @@
  * Symbol-Hintergrund mit Form, Text- und Rahmenfarbe, Schatten, Eckenradius,
  * Abstände sowie eine Hervorhebung (Leuchten/Pulsieren/Rahmen/Vergrößern),
  * solange der "aktive" Zustand vorliegt (z.B. Fenster offen). Zusätzlich –
- * wie bei der EV Charge Card – eine eigene Deckkraft/Hintergrund für die
- * ganze Karte, getrennt von der Deckkraft der einzelnen Kachel. Editor mit
+ * wie bei der EV Charge Card / Power-Flow-Karte (radial-flow-card) – eine
+ * eigene Deckkraft/Hintergrund für die ganze Karte, getrennt von der
+ * Deckkraft der einzelnen Kachel, inklusive "Theme + Farbton"-Modus mit
+ * eigener Akzentfarbe für denselben weichen Glow-Effekt. Editor mit
  * denselben Tabs/Gruppen-Bausteinen wie in der Abfall-Karte, damit sich
  * beide Karten gleich bedienen.
  *
@@ -29,7 +31,7 @@
  *   3. Karte hinzufügen -> "Status-Übersicht-Karte" auswählen (per UI konfigurierbar)
  */
 
-const CARD_VERSION = '2.1.0';
+const CARD_VERSION = '2.2.0';
 const CARD_TYPE = 'status-summary-card';
 const EDITOR_TYPE = 'status-summary-card-editor';
 
@@ -314,11 +316,19 @@ const tileVars = (state, cfg) => {
 const cardVars = (cfg) => {
   const mode = cfg.card_bg_mode || DEFAULTS.card_bg_mode;
   const op = Number(cfg.card_bg_opacity ?? DEFAULTS.card_bg_opacity);
+  const accent = colorInfo(cfg.accent_color) || colorInfo('primary');
   let bg = 'transparent';
   if (mode === 'theme') {
     bg = withAlpha(THEME_BG, op);
-  } else if (mode === 'custom') {
-    const info = colorInfo(cfg.card_bg_color) || colorInfo([255, 255, 255]);
+  } else if (mode === 'tinted') {
+    // Weicher Farbverlauf der Akzentfarbe über dem normalen Theme-Hintergrund
+    // – derselbe Glow-Effekt wie bei der Power-Flow-Karte (radial-flow-card).
+    const tint = cfg.card_bg_gradient
+      ? `linear-gradient(135deg, ${withAlpha(accent.css, op)} 0%, ${withAlpha(accent.css, Math.round(op * 0.15))} 100%)`
+      : `linear-gradient(${withAlpha(accent.css, op)}, ${withAlpha(accent.css, op)})`;
+    bg = `${tint}, ${THEME_BG}`;
+  } else if (mode === 'accent' || mode === 'custom') {
+    const info = mode === 'custom' ? (colorInfo(cfg.card_bg_color) || colorInfo([255, 255, 255])) : accent;
     bg = cfg.card_bg_gradient
       ? `linear-gradient(135deg, ${withAlpha(info.css, op)} 0%, ${withAlpha(`color-mix(in srgb, ${info.css} 62%, black)`, op)} 100%)`
       : withAlpha(info.css, op);
@@ -712,7 +722,7 @@ const T = {
     layout: 'Layout',
     appearance: 'Darstellung (Karte/Chip)',
     tap_action: 'Aktion bei Tippen',
-    card_bg_mode: 'Hintergrund der Karte', card_bg_color: 'Farbe der Karte', card_bg_opacity: 'Deckkraft der Karte',
+    card_bg_mode: 'Hintergrund der Karte', accent_color: 'Akzentfarbe der Karte', card_bg_color: 'Farbe der Karte', card_bg_opacity: 'Deckkraft der Karte',
     card_bg_gradient: 'Farbverlauf', card_blur: 'Unschärfe hinter der Karte (Glas-Effekt)',
     bg_mode: 'Hintergrund', bg_color: 'Hintergrundfarbe', bg_opacity: 'Deckkraft / Farbstärke', bg_gradient: 'Farbverlauf',
     blur: 'Unschärfe dahinter (Glas-Effekt)',
@@ -727,13 +737,14 @@ const T = {
     expand_groups: 'Gruppen-Entitäten (z.B. eine Lampengruppe) werden in ihre Mitglieder aufgelöst und einzeln gezählt.',
     filter_areas: 'Schränkt nur den „Alle hinzufügen“-Button unten ein, nicht die bereits gewählten Entitäten.',
     card_bg_opacity: 'Gilt für die ganze Karte (als Fläche hinter allen Kacheln), zusätzlich zur Deckkraft der einzelnen Kachel oben.',
+    accent_color: 'Nur bei „Theme + Farbton“ oder „Volle Akzentfarbe“ – derselbe weiche Farbverlauf wie bei der Power-Flow-Karte.',
     card_blur: 'Der Bereich hinter der ganzen Karte wird unscharf durchscheinend – wie Milchglas.',
     bg_opacity: 'Bei „Theme + Farbton“ ist das die Stärke des Farbtons.',
     blur: 'Der Hintergrund hinter der Kachel wird unscharf durchscheinend – wie Milchglas.',
     highlight: 'Wird nur angezeigt, solange der aktive Zustand vorliegt (z.B. Fenster offen, Batterie schwach).',
   },
   opt: {
-    card_bg_mode: { theme: 'Theme-Hintergrund', custom: 'Eigene Farbe', none: 'Transparent (kein eigener Kartenhintergrund)' },
+    card_bg_mode: { theme: 'Theme-Hintergrund', tinted: 'Theme + Farbton', accent: 'Volle Akzentfarbe', custom: 'Eigene Farbe', none: 'Transparent (kein eigener Kartenhintergrund)' },
     bg_mode: { theme: 'Karten-Hintergrund (Theme)', tinted: 'Theme + Farbton', accent: 'Volle Akzentfarbe', custom: 'Eigene Farbe', none: 'Transparent (kein Hintergrund)' },
     icon_bg_mode: { none: 'Keiner', accent: 'Akzentfarbe', theme: 'Karten-Hintergrund', custom: 'Eigene Farbe' },
     icon_shape: { circle: 'Kreis', rounded: 'Abgerundet', square: 'Eckig' },
@@ -918,10 +929,11 @@ class StatusSummaryCardEditor extends HTMLElement {
     const v = (k) => this._val(k);
     return [
       this._group('card_bg', 'mdi:card-outline', [
-        { name: 'card_bg_mode', selector: this._opts('card_bg_mode', ['theme', 'custom', 'none']) },
+        { name: 'card_bg_mode', selector: this._opts('card_bg_mode', ['theme', 'tinted', 'accent', 'custom', 'none']) },
+        ...(['tinted', 'accent'].includes(v('card_bg_mode')) ? [{ name: 'accent_color', selector: { color_rgb: {} } }] : []),
         ...(v('card_bg_mode') === 'custom' ? [{ name: 'card_bg_color', selector: { color_rgb: {} } }] : []),
         ...(v('card_bg_mode') !== 'none' ? [{ name: 'card_bg_opacity', selector: this._num(0, 100, 1, '%') }] : []),
-        ...(v('card_bg_mode') === 'custom' ? [{ name: 'card_bg_gradient', selector: { boolean: {} } }] : []),
+        ...(['tinted', 'accent', 'custom'].includes(v('card_bg_mode')) ? [{ name: 'card_bg_gradient', selector: { boolean: {} } }] : []),
         { name: 'card_blur', selector: this._num(0, 30, 1, 'px') },
       ], true),
       this._group('bg', 'mdi:format-color-fill', [
@@ -1145,7 +1157,9 @@ class StatusSummaryCardEditor extends HTMLElement {
       if (JSON.stringify(cfg[k]) === JSON.stringify(DEFAULTS[k]) && this._config[k] === undefined) delete cfg[k];
     });
     if (cfg.mode !== 'battery' && cfg.mode !== 'combo') delete cfg.battery_threshold;
-    if (cfg.card_bg_mode !== 'custom') { delete cfg.card_bg_color; delete cfg.card_bg_gradient; }
+    if (!['tinted', 'accent'].includes(cfg.card_bg_mode)) delete cfg.accent_color;
+    if (cfg.card_bg_mode !== 'custom') delete cfg.card_bg_color;
+    if (!['tinted', 'accent', 'custom'].includes(cfg.card_bg_mode)) delete cfg.card_bg_gradient;
     if (!cfg.card_bg_mode || cfg.card_bg_mode === 'none') delete cfg.card_bg_opacity;
     if (cfg.bg_mode !== 'custom') delete cfg.bg_color;
     if (!cfg.bg_mode || cfg.bg_mode === 'none') delete cfg.bg_opacity;
