@@ -1,7 +1,7 @@
 <svg viewBox="0 0 850 220" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
   <rect width="850" height="220" fill="#15161b"/>
   <text x="425" y="26" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">
-    Auswahl an Icon-Farben über den nativen Farbpicker (icon_color_active / icon_color_inactive)
+    Icon colors from the native color picker (icon_color_active / icon_color_inactive)
   </text>
 
   <!-- Reihe 1 -->

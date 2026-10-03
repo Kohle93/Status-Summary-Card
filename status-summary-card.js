@@ -30,7 +30,7 @@
  *   3. Karte hinzufügen -> "Status-Übersicht-Karte" auswählen (per UI konfigurierbar)
  */
 
-const CARD_VERSION = '3.0.0';
+const CARD_VERSION = '3.1.0';
 const CARD_TYPE = 'status-summary-card';
 const EDITOR_TYPE = 'status-summary-card-editor';
 
@@ -98,52 +98,34 @@ const deepGet = (obj, path) => path.split('.').reduce((o, k) => (o == null ? und
 /*  Konfiguration je Modus: Domain-Filter für den Entity-Picker,        */
 /*  Standard-Icons und die Text-Logik für die Kachel.                   */
 /* ------------------------------------------------------------------ */
+// Beschriftung und Texte kommen aus T (aktive Sprache, zur Laufzeit gelesen).
 const MODES = {
   covers: {
-    label: 'Rollläden',
+    get label() { return T.modes.covers.label; },
     filter: [{ domain: 'cover' }],
     activeStates: ['open', 'opening'],
     icon: { active: 'mdi:window-shutter-open', inactive: 'mdi:window-shutter' },
-    text: (active, total) => {
-      if (total === 0) return 'Keine Rollläden konfiguriert';
-      if (active === total) return 'Alle Rollläden geöffnet';
-      if (active === 0) return 'Alle Rollläden geschlossen';
-      return `${active} Rollläden geöffnet`;
-    },
+    text: (active, total) => T.modes.covers.text(active, total),
   },
   door_window: {
-    label: 'Fenster & Türen',
+    get label() { return T.modes.door_window.label; },
     filter: [{ domain: 'binary_sensor', device_class: ['door', 'window', 'garage', 'opening'] }],
     activeStates: ['on'],
     icon: { active: 'mdi:window-open-variant', inactive: 'mdi:window-closed-variant' },
-    text: (active, total) => {
-      if (total === 0) return 'Keine Fenster/Türen konfiguriert';
-      if (active === 0) return 'Alle Fenster geschlossen';
-      if (active === total) return 'Alle Fenster offen';
-      return `${active} Fenster offen`;
-    },
+    text: (active, total) => T.modes.door_window.text(active, total),
   },
   light: {
-    label: 'Lampen',
+    get label() { return T.modes.light.label; },
     filter: [{ domain: 'light' }],
     activeStates: ['on'],
     icon: { active: 'mdi:lightbulb-on', inactive: 'mdi:lightbulb-off-outline' },
-    text: (active, total) => {
-      if (total === 0) return 'Keine Lampen konfiguriert';
-      if (active === 0) return 'Alle Lampen aus';
-      if (active === total) return 'Alle Lampen eingeschaltet';
-      return `${active} Lampen eingeschaltet`;
-    },
+    text: (active, total) => T.modes.light.text(active, total),
   },
   battery: {
-    label: 'Batterien',
+    get label() { return T.modes.battery.label; },
     filter: [{ domain: 'sensor', device_class: 'battery' }, { domain: 'binary_sensor', device_class: 'battery' }],
     icon: { active: 'mdi:battery-alert-variant-outline', inactive: 'mdi:battery-check' },
-    text: (active, total) => {
-      if (total === 0) return 'Keine Batterien konfiguriert';
-      if (active === 0) return 'Alle Batterien OK';
-      return `${active} Batterien schwach`;
-    },
+    text: (active, total) => T.modes.battery.text(active, total),
   },
 };
 
@@ -563,13 +545,16 @@ class StatusSummaryCard extends HTMLElement {
 
   setConfig(config) {
     if (!config) {
-      throw new Error('Ungültige Konfiguration');
+      throw new Error(T.card.invalid_config);
     }
     this._config = { ...DEFAULTS, ...migrateConfig(config) };
     this._update();
   }
 
   set hass(hass) {
+    setLang(hass);
+    // Sprache gewechselt → DOM komplett neu aufbauen (alle Texte neu)
+    if (this._lang !== T_LANG) { this._lang = T_LANG; this._domSignature = null; }
     this._hass = hass;
     this._update();
   }
@@ -802,7 +787,7 @@ class StatusSummaryCard extends HTMLElement {
 /*  Editor – Texte, Tabs & Gruppen (identischer Aufbau wie Trash Card   */
 /*  Plus: Tab-Leiste oben, aufklappbare Gruppen, Live-Vorschau).        */
 /* ------------------------------------------------------------------ */
-const T = {
+const T_DE = {
   tabs: { general: 'Allgemein', display: 'Anzeige', design: 'Design' },
   intro: {
     general: 'Welche Entitäten sollen ausgewertet werden – und mit welchem Symbol reagiert die Karte auf „aktiv“ bzw. „inaktiv“? Die Farben dazu finden sich im Tab „Design“.',
@@ -877,7 +862,185 @@ const T = {
     appearance: { card: 'Karte', chip: 'Chip (kompakt)' },
   },
   preview: 'Vorschau', preview_active: 'Beispiel: aktiv', preview_inactive: 'Beispiel: inaktiv',
+  // Texte der Karte je Kategorie (Beschriftung + Zustandstext)
+  modes: {
+    covers: {
+      label: 'Rollläden',
+      text: (active, total) => {
+        if (total === 0) return 'Keine Rollläden konfiguriert';
+        if (active === total) return 'Alle Rollläden geöffnet';
+        if (active === 0) return 'Alle Rollläden geschlossen';
+        return `${active} ${active === 1 ? 'Rollladen' : 'Rollläden'} geöffnet`;
+      },
+    },
+    door_window: {
+      label: 'Fenster & Türen',
+      text: (active, total) => {
+        if (total === 0) return 'Keine Fenster/Türen konfiguriert';
+        if (active === 0) return 'Alle Fenster geschlossen';
+        if (active === total) return 'Alle Fenster offen';
+        return `${active} Fenster offen`;
+      },
+    },
+    light: {
+      label: 'Lampen',
+      text: (active, total) => {
+        if (total === 0) return 'Keine Lampen konfiguriert';
+        if (active === 0) return 'Alle Lampen aus';
+        if (active === total) return 'Alle Lampen eingeschaltet';
+        return `${active} ${active === 1 ? 'Lampe' : 'Lampen'} eingeschaltet`;
+      },
+    },
+    battery: {
+      label: 'Batterien',
+      text: (active, total) => {
+        if (total === 0) return 'Keine Batterien konfiguriert';
+        if (active === 0) return 'Alle Batterien OK';
+        return `${active} ${active === 1 ? 'Batterie' : 'Batterien'} schwach`;
+      },
+    },
+    combo: { label: 'Alle 4 Kategorien (Verbund)' },
+  },
+  addall: {
+    scope: ' (nur gewählter Bereich/Etage)',
+    combo: (scope) => `+ Alle passenden Entitäten aller 4 Kategorien hinzufügen${scope}`,
+    single: (label, scope) => `+ Alle „${label}“-Entitäten hinzufügen${scope}`,
+  },
+  card: { invalid_config: 'Ungültige Konfiguration' },
 };
+
+const T_EN = {
+  tabs: { general: 'General', display: 'Display', design: 'Design' },
+  intro: {
+    general: 'Which entities should be evaluated – and which icon should the card show for “active” and “inactive”? The colors are in the “Design” tab.',
+    display: 'Basic layout of the card: orientation, card or chip, arrangement of the combined view.',
+    design: 'Colors, background, opacity, border and highlight – the same options as Trash Card Plus, EV Charge Card and Radial Flow Card. At the top the card itself, below that icon and text. In the combined view (“All 4 categories”) the groups for the individual tiles are added. The preview shows the result instantly.',
+  },
+  groups: {
+    entities: 'Entities', filter: 'Limit to area / floor', behaviour: 'Behaviour',
+    icon_choice: 'Icon (active / inactive)',
+    card_bg: 'Card – background & transparency', card_frame: 'Card – border, shape & spacing',
+    bg: 'Tiles – background & transparency', icon: 'Icon', text: 'Text',
+    frame: 'Tiles – border, shape & spacing', highlight: 'Highlight when active',
+  },
+  fields: {
+    mode: 'What should be shown?',
+    entities: 'Entities',
+    covers_entities: 'Covers – entities',
+    door_window_entities: 'Windows & doors – entities',
+    light_entities: 'Lights – entities',
+    battery_entities: 'Batteries – entities',
+    filter_areas: 'Only consider these area(s) (for the button below)',
+    filter_floors: 'Only consider these floor(s) (for the button below)',
+    expand_groups: 'Expand groups (count members instead of the group)',
+    name: 'Name (optional, overrides the automatic text)',
+    icon_active: 'Icon – active (e.g. open/on/low)',
+    icon_inactive: 'Icon – inactive (e.g. closed/off/OK)',
+    icon_color_active: 'Color – active (e.g. open/on/low)',
+    icon_color_inactive: 'Color – inactive (e.g. closed/off/OK)',
+    battery_threshold: 'Low battery threshold (%)',
+    layout: 'Layout',
+    appearance: 'Appearance (card/chip)',
+    tap_action: 'Tap action',
+    accent_color: 'Accent color',
+    card_bg_mode: 'Card background', card_bg_color: 'Card color', card_bg_opacity: 'Card opacity',
+    card_bg_gradient: 'Gradient', card_blur: 'Blur behind card (glass effect)',
+    card_border_mode: 'Card border', card_border_color: 'Card border color', card_border_width: 'Card border width',
+    card_shadow: 'Card shadow', card_radius: 'Card corner radius', card_padding: 'Card padding',
+    bg_mode: 'Background', bg_color: 'Background color', bg_opacity: 'Opacity / tint strength', bg_gradient: 'Gradient',
+    blur: 'Blur behind (glass effect)',
+    icon_size: 'Icon size', icon_color_mode: 'Icon color', icon_color: 'Custom icon color',
+    icon_bg_mode: 'Icon background', icon_bg_color: 'Custom icon background color',
+    icon_bg_opacity: 'Icon background opacity', icon_shape: 'Icon background shape',
+    text_color_mode: 'Text color', text_color: 'Custom text color', font_size: 'Font size',
+    border_mode: 'Border', border_color: 'Border color', border_width: 'Border width',
+    shadow: 'Shadow', radius: 'Corner radius', padding: 'Padding', gap: 'Gap (icon/text, combined grid)',
+    highlight: 'Highlight',
+  },
+  helpers: {
+    expand_groups: 'Group entities (e.g. a light group) are expanded into their members and counted individually.',
+    filter_areas: 'Only limits the “Add all” button below, not the entities already selected.',
+    icon_color_active: 'State color “active” – for icon, highlight and tile tint.',
+    icon_color_inactive: 'State color “inactive” – for icon and tile tint.',
+    accent_color: 'Color for “Theme + tint”, “Full accent color” and the accent border of the card. Empty = theme accent color.',
+    card_bg_opacity: '0 % = see-through, 100 % = opaque. For “Theme + tint” this is the strength of the tint.',
+    card_blur: 'The background behind the card is blurred – like frosted glass.',
+    bg_opacity: 'For “Theme + tint” this is the strength of the tint.',
+    blur: 'The background behind the tile is blurred – like frosted glass.',
+    highlight: 'Only shown while the active state is present (e.g. window open, battery low).',
+  },
+  opt: {
+    card_bg_mode: { theme: 'Theme background', tinted: 'Theme + tint', accent: 'Full accent color', custom: 'Custom color', none: 'Transparent (no background)' },
+    card_border_mode: { theme: 'Like theme', none: 'No border', accent: 'Accent color', custom: 'Custom color' },
+    bg_mode: { theme: 'Card background (theme)', tinted: 'Theme + tint', accent: 'State color', custom: 'Custom color', none: 'Transparent (no background)' },
+    icon_color_mode: { auto: 'Automatic', accent: 'State color', text: 'Same as text', custom: 'Custom color' },
+    icon_bg_mode: { none: 'None', accent: 'State color', theme: 'Card background', custom: 'Custom color' },
+    icon_shape: { circle: 'Circle', rounded: 'Rounded', square: 'Square' },
+    text_color_mode: { auto: 'Automatic (good contrast)', theme: 'Theme text color', custom: 'Custom color' },
+    border_mode: { none: 'No border', accent: 'State color', theme: 'Subtle (theme)', custom: 'Custom color' },
+    shadow: { theme: 'Like theme', none: 'No shadow', soft: 'Soft', strong: 'Strong' },
+    highlight: { none: 'None', glow: 'Glow', pulse: 'Pulse', border: 'Colored border', scale: 'Slightly larger' },
+    layout: { vertical: 'Vertical', horizontal: 'Horizontal', row: 'Row (1x4)', grid: 'Grid (2x2)' },
+    appearance: { card: 'Card', chip: 'Chip (compact)' },
+  },
+  preview: 'Preview', preview_active: 'Example: active', preview_inactive: 'Example: inactive',
+  modes: {
+    covers: {
+      label: 'Covers',
+      text: (active, total) => {
+        if (total === 0) return 'No covers configured';
+        if (active === total) return 'All covers open';
+        if (active === 0) return 'All covers closed';
+        return `${active} ${active === 1 ? 'cover' : 'covers'} open`;
+      },
+    },
+    door_window: {
+      label: 'Windows & doors',
+      text: (active, total) => {
+        if (total === 0) return 'No windows/doors configured';
+        if (active === 0) return 'All windows closed';
+        if (active === total) return 'All windows open';
+        return `${active} ${active === 1 ? 'window' : 'windows'} open`;
+      },
+    },
+    light: {
+      label: 'Lights',
+      text: (active, total) => {
+        if (total === 0) return 'No lights configured';
+        if (active === 0) return 'All lights off';
+        if (active === total) return 'All lights on';
+        return `${active} ${active === 1 ? 'light' : 'lights'} on`;
+      },
+    },
+    battery: {
+      label: 'Batteries',
+      text: (active, total) => {
+        if (total === 0) return 'No batteries configured';
+        if (active === 0) return 'All batteries OK';
+        return `${active} ${active === 1 ? 'battery' : 'batteries'} low`;
+      },
+    },
+    combo: { label: 'All 4 categories (combined)' },
+  },
+  addall: {
+    scope: ' (selected area/floor only)',
+    combo: (scope) => `+ Add all matching entities of all 4 categories${scope}`,
+    single: (label, scope) => `+ Add all “${label}” entities${scope}`,
+  },
+  card: { invalid_config: 'Invalid configuration' },
+};
+
+const langOf = (hass) => String(hass?.locale?.language || hass?.language || 'de').toLowerCase();
+const isDe = (hass) => langOf(hass).startsWith('de');
+// Fehlende EN-Schlüssel fallen auf DE zurück (Sicherheitsnetz, soll aber nie greifen)
+const mergeStrings = (base, over) => { const o = Array.isArray(base) ? [...base] : { ...base };
+  Object.entries(over || {}).forEach(([k, v]) => { o[k] = v && typeof v === 'object' && !Array.isArray(v) && typeof v !== 'function' && base[k] && typeof base[k] === 'object' ? mergeStrings(base[k], v) : v; });
+  return o; };
+const T_EN_FULL = mergeStrings(T_DE, T_EN);
+let T = T_DE;
+let T_LANG = 'de';
+// Liefert true, wenn sich die Sprache geändert hat
+const setLang = (hass) => { const l = isDe(hass) ? 'de' : 'en'; if (l === T_LANG) return false; T_LANG = l; T = l === 'de' ? T_DE : T_EN_FULL; return true; };
 
 const EDITOR_TABS = [
   { id: 'general', icon: 'mdi:tune-variant' },
@@ -944,8 +1107,16 @@ class StatusSummaryCardEditor extends HTMLElement {
 
   set hass(hass) {
     const first = !this._hass;
+    setLang(hass);
+    let langChanged = false;
+    if (this._lang !== T_LANG) {
+      langChanged = this._lang !== undefined || this._built;
+      this._lang = T_LANG;
+      // Sprache gewechselt → Shell (Tabs) und Pane neu aufbauen
+      if (this._built) { this._built = false; this._paneTab = null; }
+    }
     this._hass = hass;
-    if (first) this._refresh();
+    if (first || langChanged) this._refresh();
     else this._pushHass();
   }
 
@@ -994,7 +1165,7 @@ class StatusSummaryCardEditor extends HTMLElement {
             mode: 'dropdown',
             options: [
               ...Object.entries(MODES).map(([value, cfg]) => ({ value, label: cfg.label })),
-              { value: 'combo', label: 'Alle 4 Kategorien (Verbund)' },
+              { value: 'combo', label: T.modes.combo.label },
             ],
           },
         },
@@ -1304,10 +1475,10 @@ class StatusSummaryCardEditor extends HTMLElement {
     const isCombo = this._config.mode === 'combo';
     const modeCfg = MODES[this._config.mode] || MODES.covers;
     const areaIds = this._resolveAreaFilterIds();
-    const scopeSuffix = areaIds.size ? ' (nur gewählter Bereich/Etage)' : '';
+    const scopeSuffix = areaIds.size ? T.addall.scope : '';
     this._addAllBtn.textContent = isCombo
-      ? `+ Alle passenden Entitäten aller 4 Kategorien hinzufügen${scopeSuffix}`
-      : `+ Alle „${modeCfg.label}“-Entitäten hinzufügen${scopeSuffix}`;
+      ? T.addall.combo(scopeSuffix)
+      : T.addall.single(modeCfg.label, scopeSuffix);
   }
 
   /* ---------- Änderungen ---------- */
@@ -1356,9 +1527,9 @@ window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === CARD_TYPE)) {
   window.customCards.push({
     type: CARD_TYPE,
-    name: 'Status-Übersicht-Karte',
+    name: 'Status Summary Card',
     description:
-      'Zeigt dynamisch den Status von Rollläden, Fenstern/Türen, Lampen oder Batterien an – einzeln oder im Verbund, als Karte oder Chip. Individualisierung wie bei der Abfall-Karte: Hintergrund, Transparenz, Farbverlauf, Glas-Effekt, Symbol-Hintergrund, Rahmen, Schatten und Hervorhebung (Leuchten/Pulsieren/Rahmen/Vergrößern).',
+      'Shows the status of covers, windows/doors, lights or batteries – single or combined, as a card or chip. Same design system as Trash Card Plus, EV Charge Card and Radial Flow Card: background, opacity, gradient, glass effect, border, shadow and highlight (glow/pulse/border/scale).',
     preview: true,
     documentationURL: 'https://github.com/Kohle93/Status-Summary-Card',
   });

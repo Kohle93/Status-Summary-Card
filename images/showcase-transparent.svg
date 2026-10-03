@@ -29,8 +29,8 @@
       <line x1="42" y1="45" x2="68" y2="45"/>
       <line x1="42" y1="56" x2="68" y2="56"/>
     </g>
-    <text x="100" y="42" fill="#ffffff" font-size="17" font-weight="700">3 Fenster offen</text>
-    <text x="100" y="63" fill="#ffffffb0" font-size="12">Fenster &amp; Türen · aktiv</text>
+    <text x="100" y="42" fill="#ffffff" font-size="17" font-weight="700">3 windows open</text>
+    <text x="100" y="63" fill="#ffffffb0" font-size="12">Windows &amp; doors · active</text>
   </g>
 
   <!-- Glaskarte: horizontal, inaktiv -->
@@ -39,8 +39,8 @@
     <circle cx="55" cy="45" r="26" fill="#ffffff22"/>
     <path d="M55 30 L70 38 L70 55 L40 55 L40 38 Z" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
     <path d="M47 46 L53 52 L64 39" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="100" y="42" fill="#ffffff" font-size="17" font-weight="700">Alle geschlossen</text>
-    <text x="100" y="63" fill="#ffffffb0" font-size="12">Fenster &amp; Türen · inaktiv</text>
+    <text x="100" y="42" fill="#ffffff" font-size="17" font-weight="700">All closed</text>
+    <text x="100" y="63" fill="#ffffffb0" font-size="12">Windows &amp; doors · inactive</text>
   </g>
 
   <!-- Glaskarte: vertikal, klein -->
@@ -49,9 +49,9 @@
     <circle cx="75" cy="42" r="24" fill="#ffffff22"/>
     <rect x="63" y="30" width="24" height="30" rx="3" fill="none" stroke="#ffffff" stroke-width="4"/>
     <rect x="70" y="25" width="10" height="6" rx="2" fill="#ffffff"/>
-    <text x="75" y="90" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">4 Batterien</text>
-    <text x="75" y="107" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">schwach</text>
+    <text x="75" y="90" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">4 batteries</text>
+    <text x="75" y="107" fill="#ffffff" font-size="14" font-weight="700" text-anchor="middle">low</text>
   </g>
 
-  <text x="40" y="235" fill="#ffffffcc" font-size="13" font-style="italic">Transparent-Modus – Karte legt sich mit Blur-Effekt über den Dashboard-Hintergrund</text>
+  <text x="40" y="235" fill="#ffffffcc" font-size="13" font-style="italic">Transparent mode – the card sits on the dashboard background with a blur effect</text>
 </svg>
