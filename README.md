@@ -15,7 +15,7 @@ sind – komplett über das UI konfigurierbar, ganz ohne YAML.
 - **"Alle passenden Entitäten hinzufügen"-Button** im Editor (auch im Verbund für alle 4 Kategorien auf einmal), optional eingegrenzt auf bestimmte Bereiche/Etagen
 - **Eigene Icons und Farben für aktiven und inaktiven Zustand**, per nativem Farbpicker
 - **Zwei Layouts**: vertikal oder horizontal (bzw. Reihe/Raster im Verbund)
-- **Frei wählbare Hintergrundfarbe mit eigenem Transparenz-Regler**, zusätzlich zum normalen/transparenten Glas-Effekt
+- **Einheitliches Design wie Trash Card Plus, EV Charge Card und Power-Flow-Karte**: Hintergrund (Theme, Theme + Farbton, Akzentfarbe, eigene Farbe, transparent) mit Deckkraft, Farbverlauf und Glas-Effekt, Rahmen, Schatten, Eckenradius sowie Hervorhebung (Leuchten, Pulsieren, Rahmen, Vergrößern)
 - **Icon-Größe und Schriftgröße** frei per Regler einstellbar
 - **Größenanpassung per Drag & Drop** in der Bereiche-Ansicht
 - **Frei konfigurierbare Tap-Action** (Navigieren, Mehr-Info, URL, Service-Aufruf)
@@ -93,7 +93,6 @@ entities:
   - cover.rolladen_kueche
   - cover.rolladen_schlafzimmer
 layout: vertical
-style: solid
 icon_color_active: purple
 icon_color_inactive: grey
 ```
@@ -107,7 +106,8 @@ entities:
   - cover.rolladen_buero_strasse
   - cover.rolladen_buero_garten
 layout: horizontal
-style: transparent
+card_bg_opacity: 30
+card_blur: 6
 icon_color_active: teal
 icon_color_inactive: "#607d8b"
 icon_size: 30
@@ -124,7 +124,6 @@ entities:
   - binary_sensor.fenster_bad
   - binary_sensor.tuer_terrasse
 layout: vertical
-style: solid
 icon_active: mdi:door-open
 icon_inactive: mdi:door-closed
 icon_color_active: red
@@ -141,7 +140,8 @@ entities:
   - light.kueche_arbeitsplatte
   - light.flur
 layout: horizontal
-style: transparent
+card_bg_opacity: 30
+card_blur: 6
 icon_color_active: amber
 icon_color_inactive: grey
 tap_action:
@@ -160,7 +160,6 @@ entities:
   - binary_sensor.rauchmelder_kueche_battery
 battery_threshold: 15
 layout: vertical
-style: solid
 icon_color_active: deep-orange
 icon_color_inactive: light-green
 ```
@@ -175,7 +174,8 @@ entities:
   - binary_sensor.rauchmelder_kueche_battery
 battery_threshold: 20
 layout: horizontal
-style: transparent
+card_bg_opacity: 30
+card_blur: 6
 icon_size: 28
 font_size: 14
 tap_action:
@@ -199,7 +199,8 @@ icon_inactive: mdi:window-shutter-cog
 icon_color_active: indigo
 icon_color_inactive: blue-grey
 layout: vertical
-style: transparent
+card_bg_opacity: 30
+card_blur: 6
 icon_size: 40
 font_size: 15
 tap_action:
@@ -219,7 +220,6 @@ tap_action:
 type: custom:status-summary-card
 mode: combo
 layout: row
-style: solid
 covers_entities:
   - cover.rolladen_wohnzimmer
   - cover.rolladen_kueche
@@ -243,7 +243,10 @@ icon_color_inactive: grey
 type: custom:status-summary-card
 mode: combo
 layout: grid
-style: transparent
+card_bg_mode: none
+card_border_mode: none
+bg_opacity: 30
+blur: 6
 covers_entities:
   - cover.rolladen_buero_strasse
 door_window_entities:
@@ -294,11 +297,26 @@ mode: light
 entities:
   - light.wohnzimmer_decke
   - light.kueche_arbeitsplatte
-background_color: [26, 35, 126]
-background_opacity: 55
+card_bg_mode: custom
+card_bg_color: [26, 35, 126]
+card_bg_opacity: 55
+card_blur: 6
 icon_color_active: amber
 icon_color_inactive: "#ffffff"
-style: transparent
+```
+
+### ✨ Glow wie bei der Power-Flow-Karte
+
+```yaml
+type: custom:status-summary-card
+mode: door_window
+entities:
+  - binary_sensor.fenster_kueche
+accent_color: [76, 175, 80]
+card_bg_mode: tinted
+card_bg_opacity: 30
+card_bg_gradient: true
+highlight: glow
 ```
 
 ## ⚙️ Konfigurationsoptionen
@@ -322,12 +340,54 @@ style: transparent
 | `battery_threshold`      | number  | `20`       | Nur Modus `battery`/`combo`: Schwellwert in % für "schwach"                   |
 | `layout`                 | string  | `vertical` | `vertical`/`horizontal` normal, `row`/`grid` bei `mode: combo`                |
 | `appearance`             | string  | `card`     | `card` (volle Karte) oder `chip` (kompakte Pille)                            |
-| `style`                  | string  | `solid`    | `solid` oder `transparent` (Glas-Effekt)                                      |
-| `background_color`       | [r,g,b] | –          | Frei wählbare Hintergrundfarbe (Farbpicker), überschreibt `style` farblich, Blur bei `transparent` bleibt erhalten |
-| `background_opacity`     | number  | –          | Transparenz des Hintergrunds in % (0–100). Ohne eigene Angabe: 30% bei `transparent`, 100% bei `solid` |
-| `icon_size`              | number  | `32`       | Icon-Größe in px                                                              |
-| `font_size`              | number  | `13`       | Schriftgröße in px                                                            |
 | `tap_action`             | action  | –          | Standard-HA-Aktion beim Antippen der Karte                                    |
+
+### 🎨 Design (einheitlich mit Trash Card Plus, EV Charge Card und Power-Flow-Karte)
+
+Alle Design-Optionen stehen im Editor unter **Design** – mit denselben Auswahlen,
+Bezeichnungen und YAML-Schlüsseln wie in den anderen Karten. Design-YAML lässt sich
+deshalb zwischen den Karten kopieren. Bei einer einzelnen Kategorie ist die Karte
+selbst die Fläche (als Chip die Pille); im Verbund liegen vier Kacheln auf der Karte,
+die zusätzlich eigene Kachel-Optionen haben.
+
+**Karte**
+
+| Option | Standard | Werte |
+| --- | --- | --- |
+| `accent_color` | Theme-Akzent | Farbe für `tinted`, `accent` und den Akzent-Rahmen der Karte |
+| `card_bg_mode` | `theme` | `theme`, `tinted` (Theme + Farbton), `accent`, `custom`, `none` |
+| `card_bg_color`, `card_bg_opacity`, `card_bg_gradient` | – / `100` / `false` | Eigene Farbe, Deckkraft in % (bei `tinted` Stärke des Farbtons), Farbverlauf |
+| `card_blur` | `0` | Unschärfe hinter der Karte in px (Glas-Effekt) |
+| `card_border_mode` | `theme` | `theme`, `none`, `accent`, `custom` (+ `card_border_color`, `card_border_width`) |
+| `card_shadow` | `theme` | `theme`, `none`, `soft`, `strong` |
+| `card_radius` | Theme | Eckenradius in px |
+| `card_padding` | `4` | Nur Verbund: Innenabstand der Karte um die Kacheln |
+
+**Symbol & Text**
+
+| Option | Standard | Werte |
+| --- | --- | --- |
+| `icon_color_active`, `icon_color_inactive` | primär / grau | Zustandsfarben (Farbpicker, Hex oder HA-Farbname) |
+| `icon_size` | `32` | Symbolgröße in px |
+| `icon_color_mode` | `auto` | `auto`, `accent` (Zustandsfarbe), `text`, `custom` (+ `icon_color`) |
+| `icon_bg_mode`, `icon_bg_color`, `icon_bg_opacity`, `icon_shape` | `none` / – / `20` / `circle` | `none`, `accent`, `theme`, `custom`; Form `circle`, `rounded`, `square` |
+| `text_color_mode`, `text_color` | `auto` | `auto`, `theme`, `custom` |
+| `font_size` | `13` | Schriftgröße in px |
+| `padding`, `gap` | `16` / `8` | Innenabstand und Abstand Symbol/Text |
+| `highlight` | `none` | `none`, `glow`, `pulse`, `border`, `scale` – solange der aktive Zustand vorliegt |
+
+**Kacheln (nur Verbund)**
+
+| Option | Standard | Werte |
+| --- | --- | --- |
+| `bg_mode` | `theme` | `theme`, `tinted`, `accent` (Zustandsfarbe), `custom`, `none` |
+| `bg_color`, `bg_opacity`, `bg_gradient`, `blur` | – / `100` / `false` / `0` | wie bei der Karte, je Kachel |
+| `border_mode`, `border_color`, `border_width` | `none` / – / `1` | `none`, `accent`, `theme`, `custom` |
+| `shadow` | `soft` | `theme`, `none`, `soft`, `strong` |
+| `radius` | `14` | Eckenradius der Kacheln in px |
+
+Ältere Schlüssel (`style`, `background_color`, `background_opacity` sowie bis v2.3 die
+Kachel-Werte im Einzelmodus) werden automatisch in die neuen Schlüssel übernommen.
 
 ## 🐛 Fehler melden / Mitwirken
 
